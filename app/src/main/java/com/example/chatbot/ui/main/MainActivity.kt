@@ -11,6 +11,7 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -152,7 +153,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.drawerLayout.addDrawerListener(drawerToggle)
         drawerToggle.syncState()
 
-        binding.toolbar.inflateMenu(R.menu.main_toolbar)
         binding.toolbar.setOnMenuItemClickListener(::onToolbarMenuItemSelected)
 
         binding.navChatSessions.setNavigationItemSelectedListener(::onDrawerSessionSelected)
@@ -196,10 +196,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 updateSendButtonState()
             }
         })
-
-        binding.fabNewChat.setOnClickListener {
-            viewModel.startNewChat()
-        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -262,6 +258,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         updateSendButtonState()
+        binding.toolbar.post { invalidateOptionsMenu() }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_toolbar, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (onToolbarMenuItemSelected(item)) return true
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
@@ -275,10 +282,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun onToolbarMenuItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_open_sessions) {
-            viewModel.refreshRecentSessions()
-            binding.drawerLayout.openDrawer(GravityCompat.START)
-            return true
+        when (item.itemId) {
+            R.id.action_new_chat -> {
+                viewModel.startNewChat()
+                return true
+            }
+            R.id.action_open_sessions -> {
+                viewModel.refreshRecentSessions()
+                binding.drawerLayout.openDrawer(GravityCompat.START)
+                return true
+            }
         }
         return false
     }

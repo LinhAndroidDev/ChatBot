@@ -21,6 +21,10 @@
         <item name="fontFamily">sans-serif</item>
     </style>
 
+    <style name="TextAppearance.Chat.AssistantPlain" parent="TextAppearance.Chat.Body">
+        <item name="android:textColor">@color/chat_assistant_message</item>
+    </style>
+
     <style name="TextAppearance.Chat.Time" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:textSize">11sp</item>
         <item name="android:letterSpacing">0.02</item>
