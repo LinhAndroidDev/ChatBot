@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Nền: tông ấm, mềm -->
+    <color name="chat_screen_bg">#FFF5F3FA</color>
+    <color name="chat_composer_surface">#FFFDFCFE</color>
+    <color name="chat_composer_divider">#1E6750A4</color>
+    <color name="chat_input_fill">#FFF0EDF8</color>
+
+    <!-- User: tím-xanh pastel -->
+    <color name="chat_user_bubble">#FFE9EDFF</color>
+    <color name="chat_user_bubble_stroke">#266366F1</color>
+    <color name="chat_user_role">#FF4F5BD5</color>
+    <color name="chat_user_time">#99404759</color>
+    <color name="chat_user_message">#FF1F2937</color>
+
+    <!-- Assistant: trắng kem, viền rất nhẹ -->
+    <color name="chat_assistant_bubble">#FFFEFEFE</color>
+    <color name="chat_assistant_bubble_stroke">#14000000</color>
+    <color name="chat_assistant_role">#8A8F9E</color>
+    <color name="chat_assistant_time">#996B7280</color>
+    <color name="chat_assistant_message">#FF1F2937</color>
+
+    <color name="chat_code_surface">#FFF1F5F9</color>
+    <color name="chat_code_stroke">#22000000</color>
+    <color name="chat_code_lang">#FF475569</color>
+
+    <color name="chat_markdown_link">#FF3949AB</color>
+    <color name="chat_markdown_code_block_bg">#FFF1F5F9</color>
+    <color name="chat_markdown_code_block_fill">#22000000</color>
+    <color name="chat_markdown_code_text">#FF1E293B</color>
+    <color name="chat_markdown_inline_code_bg">#FFE2E8F0</color>
+    <color name="chat_markdown_inline_code_text">#FF334155</color>
+
+    <color name="bubble_user">@color/chat_user_bubble</color>
+    <color name="bubble_assistant">@color/chat_assistant_bubble</color>
+</resources>

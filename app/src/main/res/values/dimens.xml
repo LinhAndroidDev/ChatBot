@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="chat_screen_padding_h">20dp</dimen>
+    <!-- Giới hạn mềm cho bubble user; thực tế còn bị thu bởi chiều rộng hàng trong ChatAdapter -->
+    <dimen name="chat_bubble_max_width">1000dp</dimen>
+    <dimen name="chat_bubble_tail_space">44dp</dimen>
+    <dimen name="chat_bubble_corner">22dp</dimen>
+    <dimen name="chat_bubble_stroke_width">1dp</dimen>
+    <dimen name="chat_bubble_padding_h">16dp</dimen>
+    <dimen name="chat_bubble_padding_v">12dp</dimen>
+    <dimen name="chat_row_padding_v">10dp</dimen>
+    <dimen name="chat_composer_corner_top">28dp</dimen>
+    <dimen name="chat_composer_padding_h">12dp</dimen>
+    <dimen name="chat_composer_padding_v">10dp</dimen>
+    <dimen name="chat_list_top_padding">16dp</dimen>
+    <dimen name="chat_list_bottom_padding">20dp</dimen>
+    <dimen name="chat_code_block_margin_top">8dp</dimen>
+    <dimen name="chat_code_block_padding">10dp</dimen>
+    <!-- Lề trái thêm cho bubble trợ lý (0 = chỉ dùng padding ngang của hàng tin) -->
+    <dimen name="chat_assistant_bubble_side_inset">0dp</dimen>
+    <!-- Không dùng chat_bubble_tail_space cho assistant: tránh thu hẹp ~44dp bên phải -->
+    <dimen name="chat_assistant_bubble_margin_end">12dp</dimen>
+    <!-- Khoảng cách dọc giữa các block trong tin Markdown (RecyclerView) -->
+    <dimen name="chat_markdown_block_spacing_bottom">12dp</dimen>
+    <dimen name="chat_markdown_block_spacing_top_code">8dp</dimen>
+    <dimen name="chat_code_block_card_corner">12dp</dimen>
+</resources>

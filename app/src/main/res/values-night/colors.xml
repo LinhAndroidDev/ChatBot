@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="chat_screen_bg">#FF12161C</color>
+    <color name="chat_composer_surface">#FF1A1F27</color>
+    <color name="chat_composer_divider">#33C4B5DC</color>
+    <color name="chat_input_fill">#FF232934</color>
+
+    <color name="chat_user_bubble">#FF252D45</color>
+    <color name="chat_user_bubble_stroke">#40A5B4FC</color>
+    <color name="chat_user_role">#FFC7D2FE</color>
+    <color name="chat_user_time">#99D1D5DB</color>
+    <color name="chat_user_message">#FFE5E7EB</color>
+
+    <color name="chat_assistant_bubble">#FF1C222B</color>
+    <color name="chat_assistant_bubble_stroke">#22E5E7EB</color>
+    <color name="chat_assistant_role">#FF9CA3AF</color>
+    <color name="chat_assistant_time">#999CA3AF</color>
+    <color name="chat_assistant_message">#FFE5E7EB</color>
+</resources>

@@ -1,0 +1,25 @@
+package com.example.chatbot.ui.chat
+
+enum class ChatSpeaker {
+    USER,
+    ASSISTANT,
+}
+
+data class ChatListMessage(
+    val id: String,
+    val speaker: ChatSpeaker,
+    val content: String,
+    val sentAtMillis: Long,
+)
+
+data class ChatSessionSummary(
+    val id: String,
+    val title: String,
+    val updatedAtMillis: Long,
+)
+
+data class ChatUiState(
+    val messages: List<ChatListMessage> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+)

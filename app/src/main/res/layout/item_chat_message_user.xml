@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:paddingHorizontal="@dimen/chat_screen_padding_h"
+    android:paddingVertical="@dimen/chat_row_padding_v">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:clipChildren="false"
+        app:cardCornerRadius="@dimen/chat_bubble_corner"
+        app:cardElevation="0dp"
+        app:strokeWidth="@dimen/chat_bubble_stroke_width">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/chat_bubble_padding_h"
+            android:paddingTop="@dimen/chat_bubble_padding_v"
+            android:paddingBottom="10dp">
+
+            <TextView
+                android:id="@+id/role_label"
+                style="@style/TextAppearance.Chat.Role"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Bạn" />
+
+            <TextView
+                android:id="@+id/message_text"
+                style="@style/TextAppearance.Chat.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                tools:text="Xin chào!" />
+
+            <TextView
+                android:id="@+id/time_text"
+                style="@style/TextAppearance.Chat.Time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="end"
+                tools:text="14:32" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>
