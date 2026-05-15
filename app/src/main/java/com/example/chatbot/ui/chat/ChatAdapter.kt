@@ -44,10 +44,20 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        onBindViewHolder(holder, position, mutableListOf())
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
         val item = getItem(position)
         when (holder) {
             is UserViewHolder -> holder.bind(item)
-            is AssistantViewHolder -> holder.bind(item)
+            is AssistantViewHolder -> {
+                if (payloads.isEmpty() || !payloads.contains(MessageBodyPayload)) {
+                    holder.bind(item)
+                } else {
+                    holder.bindBody(item)
+                }
+            }
         }
     }
 
@@ -107,10 +117,28 @@ class ChatAdapter(
         }
 
         fun bind(item: ChatListMessage) {
+            bindChrome(item)
+            bindBody(item)
+        }
+
+        fun bindBody(item: ChatListMessage) {
+            if (item.isStreamingMarkdown) {
+                binding.streamingPlainText.visibility = View.VISIBLE
+                binding.markdownBlocks.visibility = View.GONE
+                binding.streamingPlainText.text = item.content
+            } else {
+                binding.streamingPlainText.visibility = View.GONE
+                binding.markdownBlocks.visibility = View.VISIBLE
+                markdownBlockAdapter.setMarkdown(markwon, item.content)
+                markdownBlockAdapter.notifyDataSetChanged()
+            }
+        }
+
+        private fun bindChrome(item: ChatListMessage) {
             val ctx = binding.root.context
             val res = ctx.resources
             val marginStart = res.getDimensionPixelSize(R.dimen.chat_assistant_bubble_side_inset)
-            val marginEnd = res.getDimensionPixelSize(R.dimen.chat_assistant_bubble_margin_end)
+            val marginEnd = res.getDimensionPixelSize(R.dimen.chat_assistant_bubble_side_inset)
 
             val lp = binding.card.layoutParams as FrameLayout.LayoutParams
             lp.gravity = Gravity.START
@@ -129,15 +157,14 @@ class ChatAdapter(
             binding.timeText.setTextColor(ContextCompat.getColor(ctx, R.color.chat_assistant_time))
             binding.card.setCardBackgroundColor(ContextCompat.getColor(ctx, R.color.chat_assistant_bubble))
             binding.card.strokeColor = ContextCompat.getColor(ctx, R.color.chat_assistant_bubble_stroke)
-
-            markdownBlockAdapter.setMarkdown(markwon, item.content)
-            markdownBlockAdapter.notifyDataSetChanged()
         }
     }
 
     companion object {
         private const val VIEW_TYPE_USER = 0
         private const val VIEW_TYPE_ASSISTANT = 1
+
+        private object MessageBodyPayload
 
         private fun rowInnerWidthPx(root: View): Int {
             val res = root.resources
@@ -164,6 +191,14 @@ class ChatAdapter(
 
             override fun areContentsTheSame(oldItem: ChatListMessage, newItem: ChatListMessage): Boolean =
                 oldItem == newItem
+
+            override fun getChangePayload(oldItem: ChatListMessage, newItem: ChatListMessage): Any? =
+                when {
+                    oldItem.id != newItem.id -> null
+                    oldItem.content != newItem.content ||
+                        oldItem.isStreamingMarkdown != newItem.isStreamingMarkdown -> MessageBodyPayload
+                    else -> null
+                }
         }
     }
 }

@@ -116,6 +116,7 @@ class ChatSessionStore @Inject constructor(
             speaker = speaker,
             content = content,
             sentAtMillis = sentAtMillis,
+            isStreamingMarkdown = false,
         )
     }
 

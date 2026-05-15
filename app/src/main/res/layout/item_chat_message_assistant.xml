@@ -34,6 +34,16 @@
                 android:layout_height="wrap_content"
                 tools:text="Trợ lý" />
 
+            <TextView
+                android:id="@+id/streaming_plain_text"
+                style="@style/TextAppearance.Chat.AssistantPlain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:visibility="gone"
+                tools:text="Đang trả lời…"
+                tools:visibility="visible" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/markdown_blocks"
                 android:layout_width="match_parent"

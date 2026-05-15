@@ -133,6 +133,7 @@ class ChatViewModel @Inject constructor(
                 speaker = ChatSpeaker.ASSISTANT,
                 content = "",
                 sentAtMillis = replyAt,
+                isStreamingMarkdown = true,
             )
             _uiState.update {
                 it.copy(messages = it.messages + assistantPlaceholder)
@@ -148,7 +149,10 @@ class ChatViewModel @Inject constructor(
                                 state.copy(
                                     messages = state.messages.map { msg ->
                                         if (msg.id == assistantId) {
-                                            msg.copy(content = event.accumulatedText)
+                                            msg.copy(
+                                                content = event.accumulatedText,
+                                                isStreamingMarkdown = true,
+                                            )
                                         } else {
                                             msg
                                         }
@@ -162,7 +166,10 @@ class ChatViewModel @Inject constructor(
                                 state.copy(
                                     messages = state.messages.map { msg ->
                                         if (msg.id == assistantId) {
-                                            msg.copy(content = finalText)
+                                            msg.copy(
+                                                content = finalText,
+                                                isStreamingMarkdown = false,
+                                            )
                                         } else {
                                             msg
                                         }
@@ -176,6 +183,7 @@ class ChatViewModel @Inject constructor(
                                 speaker = ChatSpeaker.ASSISTANT,
                                 content = finalText,
                                 sentAtMillis = replyAt,
+                                isStreamingMarkdown = false,
                             )
                             sessionStore.appendMessage(sid, assistantMessage)
                             sessionStore.touchSession(sid, null)
@@ -190,7 +198,13 @@ class ChatViewModel @Inject constructor(
                                     if (!receivedAnyChunk) {
                                         state.messages.filterNot { it.id == assistantId }
                                     } else {
-                                        state.messages
+                                        state.messages.map { msg ->
+                                            if (msg.id == assistantId && msg.speaker == ChatSpeaker.ASSISTANT) {
+                                                msg.copy(isStreamingMarkdown = false)
+                                            } else {
+                                                msg
+                                            }
+                                        }
                                     }
                                 state.copy(
                                     messages = messages,

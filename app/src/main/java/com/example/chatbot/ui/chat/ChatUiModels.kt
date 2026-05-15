@@ -10,6 +10,8 @@ data class ChatListMessage(
     val speaker: ChatSpeaker,
     val content: String,
     val sentAtMillis: Long,
+    /** Khi true: chỉ hiển thị text thường (stream); khi false: render Markdown đầy đủ. */
+    val isStreamingMarkdown: Boolean = false,
 )
 
 data class ChatSessionSummary(

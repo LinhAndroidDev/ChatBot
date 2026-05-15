@@ -64,6 +64,44 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var speechRecognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var lastError: String? = null
+    private var lastChatListSizeForScroll = 0
+
+    /** Đáy (y) của item cuối trong tọa độ RecyclerView — dùng bù cuộn khi stream làm bubble cao thêm. */
+    private var streamScrollAnchorBottom = -1
+
+    private var streamLayoutListenerAdapterCount = -1
+
+    private val chatStreamScrollLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        if (!viewModel.uiState.value.isLoading) {
+            streamScrollAnchorBottom = -1
+            streamLayoutListenerAdapterCount = -1
+            return@OnLayoutChangeListener
+        }
+        val rv = binding.chatList
+        val lm = rv.layoutManager as? LinearLayoutManager ?: return@OnLayoutChangeListener
+        val adapter = rv.adapter ?: return@OnLayoutChangeListener
+        val count = adapter.itemCount
+        if (count == 0) return@OnLayoutChangeListener
+        if (count != streamLayoutListenerAdapterCount) {
+            streamLayoutListenerAdapterCount = count
+            streamScrollAnchorBottom = -1
+            return@OnLayoutChangeListener
+        }
+        val lastIdx = count - 1
+        if (rv.canScrollVertically(1)) {
+            streamScrollAnchorBottom = -1
+            return@OnLayoutChangeListener
+        }
+        val child = lm.findViewByPosition(lastIdx) ?: run {
+            streamScrollAnchorBottom = -1
+            return@OnLayoutChangeListener
+        }
+        val bottom = child.bottom
+        if (streamScrollAnchorBottom >= 0 && bottom > streamScrollAnchorBottom) {
+            rv.scrollBy(0, bottom - streamScrollAnchorBottom)
+        }
+        streamScrollAnchorBottom = bottom
+    }
 
     private val sessionTimeFormat: DateFormat =
         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
@@ -126,7 +164,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.chatList.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = true
         }
+        binding.chatList.itemAnimator = null
         binding.chatList.adapter = chatAdapter
+        binding.chatList.addOnLayoutChangeListener(chatStreamScrollLayoutListener)
 
         binding.btnSend.setOnClickListener { sendMessageFromInput() }
 
@@ -165,10 +205,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.uiState.collect { state ->
+                        val prevListSize = lastChatListSizeForScroll
                         chatAdapter.submitList(state.messages) {
-                            if (state.messages.isNotEmpty()) {
-                                binding.chatList.scrollToPosition(state.messages.lastIndex)
+                            val lastIdx = state.messages.lastIndex
+                            if (lastIdx < 0) {
+                                lastChatListSizeForScroll = 0
+                                return@submitList
                             }
+                            val listSize = state.messages.size
+                            val listStructureChanged = listSize != prevListSize
+                            // Khi đang stream: chỉ cuộn khi thêm dòng mới (user / placeholder trợ lý).
+                            // Cập nhật nội dung cùng một bubble không gọi scrollToPosition → hết giật.
+                            if (!state.isLoading || listStructureChanged) {
+                                binding.chatList.scrollToPosition(lastIdx)
+                                streamScrollAnchorBottom = -1
+                            }
+                            lastChatListSizeForScroll = listSize
                         }
                         binding.progress.isVisible = state.isLoading
                         binding.btnMic.isEnabled = !state.isLoading
@@ -296,6 +348,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+        if (::binding.isInitialized) {
+            binding.chatList.removeOnLayoutChangeListener(chatStreamScrollLayoutListener)
+        }
         speechRecognizer?.destroy()
         speechRecognizer = null
         tts?.stop()

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="chat_screen_padding_h">20dp</dimen>
+    <dimen name="chat_screen_padding_h">10dp</dimen>
     <!-- Giới hạn mềm cho bubble user; thực tế còn bị thu bởi chiều rộng hàng trong ChatAdapter -->
     <dimen name="chat_bubble_max_width">1000dp</dimen>
     <dimen name="chat_bubble_tail_space">44dp</dimen>
