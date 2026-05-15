@@ -1,7 +1,8 @@
 package com.example.chatbot.data.repository
 
 import com.example.chatbot.data.model.OllamaMessage
+import kotlinx.coroutines.flow.Flow
 
 interface ChatRepository {
-    suspend fun chat(messages: List<OllamaMessage>): Result<String>
+    fun chatStream(messages: List<OllamaMessage>): Flow<ChatStreamEvent>
 }

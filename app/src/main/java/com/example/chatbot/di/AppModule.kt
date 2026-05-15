@@ -46,7 +46,7 @@ object AppModule {
 
     @Provides
     @Named("ollama_model")
-    fun provideOllamaModel(): String = "llama3"
+    fun provideOllamaModel(): String = "qwen2.5:7b"
 
     @Provides
     @Singleton

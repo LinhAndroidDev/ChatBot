@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.chatbot.data.local.ChatSessionStore
 import com.example.chatbot.data.model.OllamaMessage
 import com.example.chatbot.data.repository.ChatRepository
+import com.example.chatbot.data.repository.ChatStreamEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,18 @@ class ChatViewModel @Inject constructor(
 
     private val systemMessage = OllamaMessage(
         role = "system",
-        content = "Bạn là trợ lý AI nói tiếng Việt.",
+        content = """
+        Bạn là trợ lý AI chuyên trả lời bằng tiếng Việt.
+        
+        QUY TẮC BẮT BUỘC:
+        - Chỉ được trả lời bằng tiếng Việt.
+        - Không được dùng tiếng Anh.
+        - Không được dùng tiếng Trung.
+        - Không được trả lời đa ngôn ngữ.
+        - Nếu có code thì chỉ code giữ nguyên ngôn ngữ lập trình.
+        - Mọi giải thích phải bằng tiếng Việt.
+        - Nếu lỡ sinh ra ngôn ngữ khác thì phải tự sửa lại sang tiếng Việt.
+        """.trimIndent()
     )
 
     private var currentSessionId: String? = null
@@ -114,36 +126,92 @@ class ChatViewModel @Inject constructor(
             refreshRecentSessionsInternal()
 
             val apiMessages = buildApiMessages()
-            val result = repository.chat(apiMessages)
-            result.fold(
-                onSuccess = { reply ->
-                    val replyAt = System.currentTimeMillis()
-                    val assistantMessage = ChatListMessage(
-                        id = newMessageId(),
-                        speaker = ChatSpeaker.ASSISTANT,
-                        content = reply,
-                        sentAtMillis = replyAt,
-                    )
-                    _uiState.update {
-                        it.copy(
-                            messages = it.messages + assistantMessage,
-                            isLoading = false,
-                        )
-                    }
-                    sessionStore.appendMessage(sid, assistantMessage)
-                    sessionStore.touchSession(sid, null)
-                    refreshRecentSessionsInternal()
-                    _ttsPrompts.tryEmit(reply)
-                },
-                onFailure = { e ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = e.message ?: e.toString(),
-                        )
-                    }
-                },
+            val assistantId = newMessageId()
+            val replyAt = System.currentTimeMillis()
+            val assistantPlaceholder = ChatListMessage(
+                id = assistantId,
+                speaker = ChatSpeaker.ASSISTANT,
+                content = "",
+                sentAtMillis = replyAt,
             )
+            _uiState.update {
+                it.copy(messages = it.messages + assistantPlaceholder)
+            }
+
+            var receivedAnyChunk = false
+            try {
+                repository.chatStream(apiMessages).collect { event ->
+                    when (event) {
+                        is ChatStreamEvent.Chunk -> {
+                            receivedAnyChunk = true
+                            _uiState.update { state ->
+                                state.copy(
+                                    messages = state.messages.map { msg ->
+                                        if (msg.id == assistantId) {
+                                            msg.copy(content = event.accumulatedText)
+                                        } else {
+                                            msg
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                        is ChatStreamEvent.Done -> {
+                            val finalText = event.fullText
+                            _uiState.update { state ->
+                                state.copy(
+                                    messages = state.messages.map { msg ->
+                                        if (msg.id == assistantId) {
+                                            msg.copy(content = finalText)
+                                        } else {
+                                            msg
+                                        }
+                                    },
+                                    isLoading = false,
+                                    error = null,
+                                )
+                            }
+                            val assistantMessage = ChatListMessage(
+                                id = assistantId,
+                                speaker = ChatSpeaker.ASSISTANT,
+                                content = finalText,
+                                sentAtMillis = replyAt,
+                            )
+                            sessionStore.appendMessage(sid, assistantMessage)
+                            sessionStore.touchSession(sid, null)
+                            refreshRecentSessionsInternal()
+                            if (finalText.isNotBlank()) {
+                                _ttsPrompts.tryEmit(finalText)
+                            }
+                        }
+                        is ChatStreamEvent.Failed -> {
+                            _uiState.update { state ->
+                                val messages =
+                                    if (!receivedAnyChunk) {
+                                        state.messages.filterNot { it.id == assistantId }
+                                    } else {
+                                        state.messages
+                                    }
+                                state.copy(
+                                    messages = messages,
+                                    isLoading = false,
+                                    error = event.error.message ?: event.error.toString(),
+                                )
+                            }
+                        }
+                    }
+                }
+            } finally {
+                _uiState.update { state ->
+                    if (!state.isLoading) return@update state
+                    val cleaned = state.messages.filterNot {
+                        it.id == assistantId &&
+                            it.speaker == ChatSpeaker.ASSISTANT &&
+                            it.content.isEmpty()
+                    }
+                    state.copy(messages = cleaned, isLoading = false)
+                }
+            }
         }
     }
 
