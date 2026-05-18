@@ -22,6 +22,7 @@ import java.util.Date
 class ChatAdapter(
     private val markwonForText: Markwon,
     private val markwonForBlocks: Markwon,
+    private val onRetryUserClick: (String) -> Unit,
 ) : ListAdapter<ChatListMessage, RecyclerView.ViewHolder>(DIFF) {
 
     override fun getItemViewType(position: Int): Int = when (getItem(position).speaker) {
@@ -35,6 +36,7 @@ class ChatAdapter(
             VIEW_TYPE_USER -> UserViewHolder(
                 ItemChatMessageUserBinding.inflate(inflater, parent, false),
                 markwonForText,
+                onRetryUserClick,
             )
             else -> AssistantViewHolder(
                 ItemChatMessageAssistantBinding.inflate(inflater, parent, false),
@@ -64,6 +66,7 @@ class ChatAdapter(
     private class UserViewHolder(
         private val binding: ItemChatMessageUserBinding,
         private val markwon: Markwon,
+        private val onRetryUserClick: (String) -> Unit,
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: ChatListMessage) {
@@ -95,6 +98,16 @@ class ChatAdapter(
             binding.messageText.setTextColor(ContextCompat.getColor(ctx, R.color.chat_user_message))
             binding.messageText.maxWidth = contentInnerMaxWidthPx(ctx, bubbleMaxPx)
             markwon.setMarkdown(binding.messageText, item.content)
+
+            if (item.showRetry) {
+                binding.retryLink.visibility = View.VISIBLE
+                binding.retryLink.setOnClickListener {
+                    onRetryUserClick(item.id)
+                }
+            } else {
+                binding.retryLink.visibility = View.GONE
+                binding.retryLink.setOnClickListener(null)
+            }
         }
     }
 
@@ -138,7 +151,7 @@ class ChatAdapter(
             val ctx = binding.root.context
             val res = ctx.resources
             val marginStart = res.getDimensionPixelSize(R.dimen.chat_assistant_bubble_side_inset)
-            val marginEnd = res.getDimensionPixelSize(R.dimen.chat_assistant_bubble_side_inset)
+            val marginEnd = res.getDimensionPixelSize(R.dimen.chat_assistant_bubble_margin_end)
 
             val lp = binding.card.layoutParams as FrameLayout.LayoutParams
             lp.gravity = Gravity.START
@@ -196,7 +209,8 @@ class ChatAdapter(
                 when {
                     oldItem.id != newItem.id -> null
                     oldItem.content != newItem.content ||
-                        oldItem.isStreamingMarkdown != newItem.isStreamingMarkdown -> MessageBodyPayload
+                        oldItem.isStreamingMarkdown != newItem.isStreamingMarkdown ||
+                        oldItem.showRetry != newItem.showRetry -> MessageBodyPayload
                     else -> null
                 }
         }

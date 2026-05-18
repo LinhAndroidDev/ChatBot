@@ -15,6 +15,7 @@
     <color name="chat_user_role">#FF4F5BD5</color>
     <color name="chat_user_time">#99404759</color>
     <color name="chat_user_message">#FF1F2937</color>
+    <color name="chat_retry_link">#FF3949AB</color>
 
     <!-- Assistant: trắng kem, viền rất nhẹ -->
     <color name="chat_assistant_bubble">#FFFEFEFE</color>

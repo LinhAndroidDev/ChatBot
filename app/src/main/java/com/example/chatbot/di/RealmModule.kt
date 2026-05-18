@@ -9,6 +9,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.realm.kotlin.RealmConfiguration
+import io.realm.kotlin.migration.AutomaticSchemaMigration
 import javax.inject.Singleton
 
 @Module
@@ -22,8 +23,8 @@ object RealmModule {
             schema = setOf(ChatSessionEntity::class, ChatMessageEntity::class),
         )
             .name("chatbot.realm")
-            .schemaVersion(1)
-            .deleteRealmIfMigrationNeeded()
+            .schemaVersion(2)
+            .migration(AutomaticSchemaMigration { })
             .directory(context.filesDir.absolutePath)
             .build()
     }

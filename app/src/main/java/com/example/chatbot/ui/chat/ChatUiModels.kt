@@ -12,6 +12,8 @@ data class ChatListMessage(
     val sentAtMillis: Long,
     /** Khi true: chỉ hiển thị text thường (stream); khi false: render Markdown đầy đủ. */
     val isStreamingMarkdown: Boolean = false,
+    /** Tin user: hiện link Thử lại sau khi gửi bị lỗi. */
+    val showRetry: Boolean = false,
 )
 
 data class ChatSessionSummary(

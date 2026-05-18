@@ -8,6 +8,7 @@
     <string name="error_empty_message">Vui lòng nhập nội dung.</string>
     <string name="chat_role_user">Bạn</string>
     <string name="chat_role_assistant">Trợ lý</string>
+    <string name="chat_retry">Thử lại</string>
     <string name="chat_new_thread">Cuộc chat mới</string>
     <string name="chat_recent_threads">Cuộc chat gần đây</string>
     <string name="chat_drawer_hint">Chọn một cuộc để tiếp tục.</string>

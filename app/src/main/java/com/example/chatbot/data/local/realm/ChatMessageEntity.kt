@@ -10,4 +10,6 @@ class ChatMessageEntity : RealmObject {
     var speakerOrdinal: Int = 0
     var content: String = ""
     var sentAtMillis: Long = 0L
+    /** Chỉ dùng cho tin user: hiện Thử lại sau lỗi API. */
+    var showRetry: Boolean = false
 }

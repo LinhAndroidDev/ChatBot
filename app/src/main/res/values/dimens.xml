@@ -9,6 +9,10 @@
     <dimen name="chat_bubble_padding_h">16dp</dimen>
     <dimen name="chat_bubble_padding_v">12dp</dimen>
     <dimen name="chat_row_padding_v">10dp</dimen>
+    <dimen name="chat_retry_margin_top">6dp</dimen>
+    <dimen name="chat_retry_padding_h">10dp</dimen>
+    <dimen name="chat_retry_padding_v">6dp</dimen>
+    <dimen name="chat_retry_min_height">40dp</dimen>
     <dimen name="chat_composer_corner_top">28dp</dimen>
     <dimen name="chat_composer_padding_h">12dp</dimen>
     <dimen name="chat_composer_padding_v">10dp</dimen>

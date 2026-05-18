@@ -102,6 +102,7 @@ class ChatViewModel @Inject constructor(
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
             val sid = ensureSessionId()
+            sessionStore.clearAllShowRetryInSession(sid)
             val now = System.currentTimeMillis()
             val userMessage = ChatListMessage(
                 id = newMessageId(),
@@ -111,8 +112,11 @@ class ChatViewModel @Inject constructor(
             )
             val willBeFirst = _uiState.value.messages.isEmpty()
             _uiState.update {
+                val cleared = it.messages.map { m ->
+                    if (m.speaker == ChatSpeaker.USER && m.showRetry) m.copy(showRetry = false) else m
+                }
                 it.copy(
-                    messages = it.messages + userMessage,
+                    messages = cleared + userMessage,
                     isLoading = true,
                     error = null,
                 )
@@ -125,7 +129,6 @@ class ChatViewModel @Inject constructor(
             }
             refreshRecentSessionsInternal()
 
-            val apiMessages = buildApiMessages()
             val assistantId = newMessageId()
             val replyAt = System.currentTimeMillis()
             val assistantPlaceholder = ChatListMessage(
@@ -139,92 +142,144 @@ class ChatViewModel @Inject constructor(
                 it.copy(messages = it.messages + assistantPlaceholder)
             }
 
-            var receivedAnyChunk = false
-            try {
-                repository.chatStream(apiMessages).collect { event ->
-                    when (event) {
-                        is ChatStreamEvent.Chunk -> {
-                            receivedAnyChunk = true
-                            _uiState.update { state ->
-                                state.copy(
-                                    messages = state.messages.map { msg ->
-                                        if (msg.id == assistantId) {
-                                            msg.copy(
-                                                content = event.accumulatedText,
-                                                isStreamingMarkdown = true,
-                                            )
-                                        } else {
-                                            msg
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                        is ChatStreamEvent.Done -> {
-                            val finalText = event.fullText
-                            _uiState.update { state ->
-                                state.copy(
-                                    messages = state.messages.map { msg ->
-                                        if (msg.id == assistantId) {
-                                            msg.copy(
-                                                content = finalText,
-                                                isStreamingMarkdown = false,
-                                            )
-                                        } else {
-                                            msg
-                                        }
-                                    },
-                                    isLoading = false,
-                                    error = null,
-                                )
-                            }
-                            val assistantMessage = ChatListMessage(
-                                id = assistantId,
-                                speaker = ChatSpeaker.ASSISTANT,
-                                content = finalText,
-                                sentAtMillis = replyAt,
-                                isStreamingMarkdown = false,
-                            )
-                            sessionStore.appendMessage(sid, assistantMessage)
-                            sessionStore.touchSession(sid, null)
-                            refreshRecentSessionsInternal()
-                            if (finalText.isNotBlank()) {
-                                _ttsPrompts.tryEmit(finalText)
-                            }
-                        }
-                        is ChatStreamEvent.Failed -> {
-                            _uiState.update { state ->
-                                val messages =
-                                    if (!receivedAnyChunk) {
-                                        state.messages.filterNot { it.id == assistantId }
+            runAssistantStream(sid, assistantId, replyAt, userMessage.id)
+        }
+    }
+
+    fun retrySend(userMessageId: String) {
+        viewModelScope.launch {
+            if (_uiState.value.isLoading) return@launch
+            val sid = ensureSessionId()
+            val msgs = _uiState.value.messages
+            val idx = msgs.indexOfFirst { it.id == userMessageId && it.speaker == ChatSpeaker.USER }
+            if (idx < 0) return@launch
+            val user = msgs[idx]
+            if (!user.showRetry) return@launch
+            val head = msgs.take(idx + 1).map { m ->
+                if (m.id == userMessageId) m.copy(showRetry = false) else m
+            }
+            _uiState.update {
+                it.copy(messages = head, error = null, isLoading = true)
+            }
+            sessionStore.setMessageShowRetry(sid, userMessageId, false)
+
+            val assistantId = newMessageId()
+            val replyAt = System.currentTimeMillis()
+            val assistantPlaceholder = ChatListMessage(
+                id = assistantId,
+                speaker = ChatSpeaker.ASSISTANT,
+                content = "",
+                sentAtMillis = replyAt,
+                isStreamingMarkdown = true,
+            )
+            _uiState.update {
+                it.copy(messages = it.messages + assistantPlaceholder)
+            }
+
+            runAssistantStream(sid, assistantId, replyAt, userMessageId)
+        }
+    }
+
+    private suspend fun runAssistantStream(
+        sid: String,
+        assistantId: String,
+        replyAt: Long,
+        userMessageIdForRetryOnFail: String,
+    ) {
+        var receivedAnyChunk = false
+        try {
+            repository.chatStream(buildApiMessages()).collect { event ->
+                when (event) {
+                    is ChatStreamEvent.Chunk -> {
+                        receivedAnyChunk = true
+                        _uiState.update { state ->
+                            state.copy(
+                                messages = state.messages.map { msg ->
+                                    if (msg.id == assistantId) {
+                                        msg.copy(
+                                            content = event.accumulatedText,
+                                            isStreamingMarkdown = true,
+                                        )
                                     } else {
-                                        state.messages.map { msg ->
-                                            if (msg.id == assistantId && msg.speaker == ChatSpeaker.ASSISTANT) {
-                                                msg.copy(isStreamingMarkdown = false)
-                                            } else {
-                                                msg
-                                            }
+                                        msg
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    is ChatStreamEvent.Done -> {
+                        val finalText = event.fullText
+                        _uiState.update { state ->
+                            state.copy(
+                                messages = state.messages.map { msg ->
+                                    when {
+                                        msg.id == assistantId -> msg.copy(
+                                            content = finalText,
+                                            isStreamingMarkdown = false,
+                                        )
+                                        msg.speaker == ChatSpeaker.USER -> msg.copy(showRetry = false)
+                                        else -> msg
+                                    }
+                                },
+                                isLoading = false,
+                                error = null,
+                            )
+                        }
+                        val assistantMessage = ChatListMessage(
+                            id = assistantId,
+                            speaker = ChatSpeaker.ASSISTANT,
+                            content = finalText,
+                            sentAtMillis = replyAt,
+                            isStreamingMarkdown = false,
+                        )
+                        sessionStore.appendMessage(sid, assistantMessage)
+                        sessionStore.clearAllShowRetryInSession(sid)
+                        sessionStore.touchSession(sid, null)
+                        refreshRecentSessionsInternal()
+                        if (finalText.isNotBlank()) {
+                            _ttsPrompts.tryEmit(finalText)
+                        }
+                    }
+                    is ChatStreamEvent.Failed -> {
+                        _uiState.update { state ->
+                            val trimmed =
+                                if (!receivedAnyChunk) {
+                                    state.messages.filterNot { it.id == assistantId }
+                                } else {
+                                    state.messages.map { msg ->
+                                        if (msg.id == assistantId && msg.speaker == ChatSpeaker.ASSISTANT) {
+                                            msg.copy(isStreamingMarkdown = false)
+                                        } else {
+                                            msg
                                         }
                                     }
-                                state.copy(
-                                    messages = messages,
-                                    isLoading = false,
-                                    error = event.error.message ?: event.error.toString(),
-                                )
+                                }
+                            val withRetry = trimmed.map { msg ->
+                                if (msg.id == userMessageIdForRetryOnFail && msg.speaker == ChatSpeaker.USER) {
+                                    msg.copy(showRetry = true)
+                                } else {
+                                    msg
+                                }
                             }
+                            state.copy(
+                                messages = withRetry,
+                                isLoading = false,
+                                error = event.error.message ?: event.error.toString(),
+                            )
                         }
+                        sessionStore.setMessageShowRetry(sid, userMessageIdForRetryOnFail, true)
                     }
                 }
-            } finally {
-                _uiState.update { state ->
-                    if (!state.isLoading) return@update state
-                    val cleaned = state.messages.filterNot {
-                        it.id == assistantId &&
-                            it.speaker == ChatSpeaker.ASSISTANT &&
-                            it.content.isEmpty()
-                    }
-                    state.copy(messages = cleaned, isLoading = false)
+            }
+        } finally {
+            _uiState.update { state ->
+                if (!state.isLoading) return@update state
+                val cleaned = state.messages.filterNot {
+                    it.id == assistantId &&
+                        it.speaker == ChatSpeaker.ASSISTANT &&
+                        it.content.isEmpty()
                 }
+                state.copy(messages = cleaned, isLoading = false)
             }
         }
     }

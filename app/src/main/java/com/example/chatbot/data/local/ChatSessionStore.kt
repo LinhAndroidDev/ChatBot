@@ -76,12 +76,27 @@ class ChatSessionStore @Inject constructor(
                     }
                     content = message.content
                     sentAtMillis = message.sentAtMillis
+                    showRetry = message.speaker == ChatSpeaker.USER && message.showRetry
                 },
             )
             val session = query<ChatSessionEntity>("id == $0", sessionId).first().find()
             if (session != null) {
                 session.updatedAtMillis = System.currentTimeMillis()
             }
+        }
+    }
+
+    suspend fun setMessageShowRetry(sessionId: String, messageId: String, value: Boolean) = withContext(Dispatchers.IO) {
+        realm.write {
+            val entity = query<ChatMessageEntity>("sessionId == $0 AND id == $1", sessionId, messageId).first().find()
+                ?: return@write
+            entity.showRetry = value
+        }
+    }
+
+    suspend fun clearAllShowRetryInSession(sessionId: String) = withContext(Dispatchers.IO) {
+        realm.write {
+            query<ChatMessageEntity>("sessionId == $0", sessionId).find().forEach { it.showRetry = false }
         }
     }
 
@@ -117,6 +132,7 @@ class ChatSessionStore @Inject constructor(
             content = content,
             sentAtMillis = sentAtMillis,
             isStreamingMarkdown = false,
+            showRetry = speaker == ChatSpeaker.USER && showRetry,
         )
     }
 

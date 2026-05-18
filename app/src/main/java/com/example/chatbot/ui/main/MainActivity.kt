@@ -67,6 +67,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var lastError: String? = null
     private var lastChatListSizeForScroll = 0
 
+    /** Session chờ mở sau khi drawer đóng xong — tránh submitList nặng chồng animation drawer. */
+    private var pendingOpenSessionId: String? = null
+
     /** Đáy (y) của item cuối trong tọa độ RecyclerView — dùng bù cuộn khi stream làm bubble cao thêm. */
     private var streamScrollAnchorBottom = -1
 
@@ -149,6 +152,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     viewModel.refreshRecentSessions()
                 }
             }
+
+            override fun onDrawerClosed(drawerView: View) {
+                super.onDrawerClosed(drawerView)
+                if (drawerView.id != R.id.nav_chat_sessions) return
+                val sid = pendingOpenSessionId ?: return
+                pendingOpenSessionId = null
+                viewModel.openSession(sid)
+            }
         }
         binding.drawerLayout.addDrawerListener(drawerToggle)
         drawerToggle.syncState()
@@ -157,7 +168,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         binding.navChatSessions.setNavigationItemSelectedListener(::onDrawerSessionSelected)
 
-        chatAdapter = ChatAdapter(chatMarkwonText, chatMarkwonBlocks)
+        chatAdapter = ChatAdapter(
+            chatMarkwonText,
+            chatMarkwonBlocks,
+            onRetryUserClick = { viewModel.retrySend(it) },
+        )
 
         tts = TextToSpeech(this, this)
 
@@ -213,8 +228,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             // Khi đang stream: chỉ cuộn khi thêm dòng mới (user / placeholder trợ lý).
                             // Cập nhật nội dung cùng một bubble không gọi scrollToPosition → hết giật.
                             if (!state.isLoading || listStructureChanged) {
-                                binding.chatList.scrollToPosition(lastIdx)
-                                streamScrollAnchorBottom = -1
+                                binding.chatList.post {
+                                    binding.chatList.scrollToPosition(lastIdx)
+                                    streamScrollAnchorBottom = -1
+                                }
                             }
                             lastChatListSizeForScroll = listSize
                         }
@@ -298,8 +315,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun onDrawerSessionSelected(item: MenuItem): Boolean {
         val sid = item.intent?.getStringExtra(EXTRA_SESSION_ID) ?: return false
-        viewModel.openSession(sid)
-        binding.drawerLayout.closeDrawer(GravityCompat.START)
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            pendingOpenSessionId = sid
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            viewModel.openSession(sid)
+        }
         return true
     }
 

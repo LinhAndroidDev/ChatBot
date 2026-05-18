@@ -25,7 +25,7 @@
             android:orientation="vertical"
             android:paddingHorizontal="@dimen/chat_bubble_padding_h"
             android:paddingTop="@dimen/chat_bubble_padding_v"
-            android:paddingBottom="10dp">
+            android:paddingBottom="@dimen/chat_bubble_padding_v">
 
             <TextView
                 android:id="@+id/role_label"
@@ -50,6 +50,22 @@
                 android:layout_marginTop="10dp"
                 android:gravity="end"
                 tools:text="14:32" />
+
+            <TextView
+                android:id="@+id/retry_link"
+                style="@style/TextAppearance.Chat.Retry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="@dimen/chat_retry_margin_top"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center_vertical|end"
+                android:minHeight="@dimen/chat_retry_min_height"
+                android:paddingHorizontal="@dimen/chat_retry_padding_h"
+                android:paddingVertical="@dimen/chat_retry_padding_v"
+                android:text="@string/chat_retry"
+                android:visibility="gone"
+                tools:visibility="visible" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 </FrameLayout>
