@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -36,6 +38,8 @@ import com.example.chatbot.databinding.ActivityMainBinding
 import com.example.chatbot.ui.chat.ChatAdapter
 import com.example.chatbot.ui.chat.ChatSessionSummary
 import com.example.chatbot.ui.chat.ChatViewModel
+import com.example.chatbot.ui.theme.ThemeModePreferences
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import io.noties.markwon.Markwon
@@ -66,6 +70,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var lastError: String? = null
     private var lastChatListSizeForScroll = 0
+
+    /** Trạng thái cuộn từ [onSaveInstanceState] (đổi theme / xoay màn hình), áp dụng một lần sau [submitList]. */
+    private var pendingChatListScrollState: Parcelable? = null
 
     /** Session chờ mở sau khi drawer đóng xong — tránh submitList nặng chồng animation drawer. */
     private var pendingOpenSessionId: String? = null
@@ -122,6 +129,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingChatListScrollState = readChatListScrollState(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -149,6 +157,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             override fun onDrawerOpened(drawerView: View) {
                 super.onDrawerOpened(drawerView)
                 if (drawerView.id == R.id.nav_chat_sessions) {
+                    syncDrawerThemeSwitch()
                     viewModel.refreshRecentSessions()
                 }
             }
@@ -167,6 +176,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.toolbar.setOnMenuItemClickListener(::onToolbarMenuItemSelected)
 
         binding.navChatSessions.setNavigationItemSelectedListener(::onDrawerSessionSelected)
+        setupDrawerThemeSwitch()
 
         chatAdapter = ChatAdapter(
             chatMarkwonText,
@@ -225,6 +235,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             }
                             val listSize = state.messages.size
                             val listStructureChanged = listSize != prevListSize
+                            val scrollRestore = pendingChatListScrollState
+                            if (scrollRestore != null) {
+                                pendingChatListScrollState = null
+                                binding.chatList.post {
+                                    (binding.chatList.layoutManager as? LinearLayoutManager)
+                                        ?.onRestoreInstanceState(scrollRestore)
+                                    streamScrollAnchorBottom = -1
+                                }
+                                lastChatListSizeForScroll = listSize
+                                return@submitList
+                            }
                             // Khi đang stream: chỉ cuộn khi thêm dòng mới (user / placeholder trợ lý).
                             // Cập nhật nội dung cùng một bubble không gọi scrollToPosition → hết giật.
                             if (!state.isLoading || listStructureChanged) {
@@ -293,6 +314,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         drawerToggle.syncState()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (!::binding.isInitialized) return
+        val lm = binding.chatList.layoutManager as? LinearLayoutManager ?: return
+        outState.putParcelable(BUNDLE_CHAT_LIST_SCROLL, lm.onSaveInstanceState())
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         drawerToggle.onConfigurationChanged(newConfig)
@@ -311,6 +339,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
         return false
+    }
+
+    private fun setupDrawerThemeSwitch() {
+        syncDrawerThemeSwitch()
+    }
+
+    private fun syncDrawerThemeSwitch() {
+        if (!::binding.isInitialized) return
+        val sw = binding.navChatSessions.getHeaderView(0)
+            .findViewById<MaterialSwitch>(R.id.switch_dark_theme) ?: return
+        sw.setOnCheckedChangeListener(null)
+        sw.isChecked = ThemeModePreferences.isDarkEnabledForSwitch(this)
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            ThemeModePreferences.setExplicitDarkTheme(this, isChecked)
+        }
     }
 
     private fun onDrawerSessionSelected(item: MenuItem): Boolean {
@@ -431,8 +474,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun readChatListScrollState(bundle: Bundle?): Parcelable? {
+        bundle ?: return null
+        return if (Build.VERSION.SDK_INT >= 33) {
+            bundle.getParcelable(BUNDLE_CHAT_LIST_SCROLL, Parcelable::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            bundle.getParcelable(BUNDLE_CHAT_LIST_SCROLL)
+        }
+    }
+
     companion object {
         private const val EXTRA_SESSION_ID = "session_id"
         private const val UTTERANCE_ID = "chat_bot_reply"
+        private const val BUNDLE_CHAT_LIST_SCROLL = "chat_list_scroll_state"
     }
 }

@@ -17,4 +17,15 @@
     <color name="chat_assistant_role">#FF9CA3AF</color>
     <color name="chat_assistant_time">#999CA3AF</color>
     <color name="chat_assistant_message">#FFE5E7EB</color>
+
+    <color name="chat_code_surface">#FF252D38</color>
+    <color name="chat_code_stroke">#33E5E7EB</color>
+    <color name="chat_code_lang">#FFCBD5E1</color>
+
+    <color name="chat_markdown_link">#FFA5B4FC</color>
+    <color name="chat_markdown_code_block_bg">#FF252D38</color>
+    <color name="chat_markdown_code_block_fill">#33E5E7EB</color>
+    <color name="chat_markdown_code_text">#FFE2E8F0</color>
+    <color name="chat_markdown_inline_code_bg">#FF2D3748</color>
+    <color name="chat_markdown_inline_code_text">#FFE2E8F0</color>
 </resources>

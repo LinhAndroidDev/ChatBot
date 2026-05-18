@@ -1,7 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.ChatBot" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">#FFB4C5FF</item>
+        <item name="colorOnPrimary">#FF1A237E</item>
+        <item name="colorPrimaryContainer">#FF3F4FA0</item>
+        <item name="colorOnPrimaryContainer">#FFE8EAFF</item>
+        <item name="android:colorBackground">@color/chat_screen_bg</item>
+        <item name="colorSurface">@color/chat_composer_surface</item>
+        <item name="colorSurfaceContainerLow">@color/chat_input_fill</item>
     </style>
 </resources>
