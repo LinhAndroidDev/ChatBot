@@ -1,11 +1,16 @@
 package com.example.chatbot.ui.chat
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import android.text.format.DateFormat
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -18,6 +23,7 @@ import com.example.chatbot.databinding.ItemChatMessageUserBinding
 import io.noties.markwon.Markwon
 import io.noties.markwon.recycler.MarkwonAdapter
 import java.util.Date
+import androidx.core.view.isVisible
 
 class ChatAdapter(
     private val markwonForText: Markwon,
@@ -118,6 +124,8 @@ class ChatAdapter(
 
         private val markdownBlockAdapter: MarkwonAdapter = createChatAssistantMarkdownBlockAdapter()
 
+        private var lastStreamLayoutTransitionElapsed: Long = 0L
+
         init {
             binding.markdownBlocks.layoutManager = LinearLayoutManager(
                 binding.markdownBlocks.context,
@@ -134,12 +142,38 @@ class ChatAdapter(
             bindBody(item)
         }
 
+        @SuppressLint("NotifyDataSetChanged")
         fun bindBody(item: ChatListMessage) {
             if (item.isStreamingMarkdown) {
                 binding.streamingPlainText.visibility = View.VISIBLE
                 binding.markdownBlocks.visibility = View.GONE
+                val prevText = binding.streamingPlainText.text?.toString().orEmpty()
+                val contentGrowing = item.content.length > prevText.length
+                val now = SystemClock.elapsedRealtime()
+                if (contentGrowing &&
+                    now - lastStreamLayoutTransitionElapsed >= STREAM_LAYOUT_TRANSITION_MIN_INTERVAL_MS
+                ) {
+                    lastStreamLayoutTransitionElapsed = now
+                    TransitionManager.beginDelayedTransition(
+                        binding.card,
+                        ChangeBounds().apply {
+                            duration = STREAM_LAYOUT_TRANSITION_DURATION_MS
+                            interpolator = DecelerateInterpolator()
+                        },
+                    )
+                }
                 binding.streamingPlainText.text = item.content
             } else {
+                lastStreamLayoutTransitionElapsed = 0L
+                if (binding.streamingPlainText.isVisible) {
+                    TransitionManager.beginDelayedTransition(
+                        binding.card,
+                        ChangeBounds().apply {
+                            duration = STREAM_TO_MARKDOWN_TRANSITION_MS
+                            interpolator = DecelerateInterpolator()
+                        },
+                    )
+                }
                 binding.streamingPlainText.visibility = View.GONE
                 binding.markdownBlocks.visibility = View.VISIBLE
                 markdownBlockAdapter.setMarkdown(markwon, item.content)
@@ -176,6 +210,10 @@ class ChatAdapter(
     companion object {
         private const val VIEW_TYPE_USER = 0
         private const val VIEW_TYPE_ASSISTANT = 1
+
+        private const val STREAM_LAYOUT_TRANSITION_MIN_INTERVAL_MS = 120L
+        private const val STREAM_LAYOUT_TRANSITION_DURATION_MS = 160L
+        private const val STREAM_TO_MARKDOWN_TRANSITION_MS = 200L
 
         private object MessageBodyPayload
 

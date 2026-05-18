@@ -24,6 +24,8 @@
     <dimen name="chat_assistant_bubble_side_inset">0dp</dimen>
     <!-- Không dùng chat_bubble_tail_space cho assistant: tránh thu hẹp ~44dp bên phải -->
     <dimen name="chat_assistant_bubble_margin_end">12dp</dimen>
+    <!-- Markwon blockMargin: list / blockquote / task list (mặc định lib ~24dp — giảm cho gọn quanh dòng -) -->
+    <dimen name="chat_markdown_theme_block_margin">12dp</dimen>
     <!-- Khoảng cách dọc giữa các block trong tin Markdown (RecyclerView) -->
     <dimen name="chat_markdown_block_spacing_bottom">12dp</dimen>
     <dimen name="chat_markdown_block_spacing_top_code">8dp</dimen>
