@@ -10,6 +10,18 @@ Gợi ý: tạo thư mục `docs/screenshots/` (hoặc bất kỳ đường dẫ
 ![Mô tả ngắn — ví dụ màn chat](docs/screenshots/chat.png)
 ![Ví dụ drawer / dark mode](docs/screenshots/drawer-dark.png)
 ```
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/8b357f34-9d49-4c99-9d5c-151479fef6f7" width="260"/>
+    </td>
+    <td width="30"></td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/7b1d8f22-917d-4d18-ba04-5399b719e658" width="260"/>
+    </td>
+  </tr>
+</table>
+
 
 ---
 
