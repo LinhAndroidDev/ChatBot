@@ -3,13 +3,6 @@
 Ứng dụng chat Android kết nối **Ollama** qua **`POST /api/chat`** với **`stream: true`** (NDJSON), hiển thị phản hồi dạng **stream** rồi render **markdown** khi xong. Lịch sử cục bộ **Realm** (phiên + tin nhắn, có cờ **Thử lại** sau lỗi). Giao diện **Material 3**, **sáng/tối** (công tắc trong drawer), markdown (**Markwon** + **Prism**), nhập giọng (**SpeechRecognizer**) và đọc phản hồi (**TextToSpeech**, tiếng Việt).
 
 ## Ảnh mô tả dự án
-
-Gợi ý: tạo thư mục `docs/screenshots/` (hoặc bất kỳ đường dẫn tương đối nào trong repo), thêm file ảnh (`.png` / `.jpg`), rồi chèn dòng Markdown dưới đây — sửa **đường dẫn** và **mô tả alt** cho phù hợp.
-
-```markdown
-![Mô tả ngắn — ví dụ màn chat](docs/screenshots/chat.png)
-![Ví dụ drawer / dark mode](docs/screenshots/drawer-dark.png)
-```
 <table align="center">
   <tr>
     <td align="center">
