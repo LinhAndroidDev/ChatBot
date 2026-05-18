@@ -3,20 +3,20 @@
 Ứng dụng chat Android kết nối **Ollama** qua **`POST /api/chat`** với **`stream: true`** (NDJSON), hiển thị phản hồi dạng **stream** rồi render **markdown** khi xong. Lịch sử cục bộ **Realm** (phiên + tin nhắn, có cờ **Thử lại** sau lỗi). Giao diện **Material 3**, **sáng/tối** (công tắc trong drawer), markdown (**Markwon** + **Prism**), nhập giọng (**SpeechRecognizer**) và đọc phản hồi (**TextToSpeech**, tiếng Việt).
 
 ## Ảnh mô tả dự án
-<table align="center">
-  <tr>
-    <td align="center">
-      <img src="https://github.com/user-attachments/assets/8b357f34-9d49-4c99-9d5c-151479fef6f7" width="260"/>
-    </td>
-    <td width="30"></td>
-    <td align="center">
-      <img src="https://github.com/user-attachments/assets/7b1d8f22-917d-4d18-ba04-5399b719e658" width="260"/>
-    </td>
-  </tr>
-</table>
+<h2 align="center">📱 Screenshots</h2>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/da04c636-906d-47ae-8a77-6db0e6d32984" width="320"/>
+  <img src="https://github.com/user-attachments/assets/8b357f34-9d49-4c99-9d5c-151479fef6f7" width="260"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/user-attachments/assets/7b1d8f22-917d-4d18-ba04-5399b719e658" width="260"/>
+</p>
+
+<br/>
+
+<h2 align="center">🎬 Demo</h2>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/da04c636-906d-47ae-8a77-6db0e6d32984" width="300"/>
 </p>
 
 ---
