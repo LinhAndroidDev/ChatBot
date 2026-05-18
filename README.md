@@ -1,6 +1,15 @@
 # ChatBot (Android + Ollama)
 
-Ứng dụng chat Android kết nối **Ollama** qua API `/api/chat` (JSON, không stream), lưu lịch sử cục bộ bằng **Realm**, giao diện **Material 3**, markdown (Markwon + Prism), giọng nói nhập (**SpeechRecognizer**) và đọc phản hồi (**Text-to-Speech**, tiếng Việt).
+Ứng dụng chat Android kết nối **Ollama** qua **`POST /api/chat`** với **`stream: true`** (NDJSON), hiển thị phản hồi dạng **stream** rồi render **markdown** khi xong. Lịch sử cục bộ **Realm** (phiên + tin nhắn, có cờ **Thử lại** sau lỗi). Giao diện **Material 3**, **sáng/tối** (công tắc trong drawer), markdown (**Markwon** + **Prism**), nhập giọng (**SpeechRecognizer**) và đọc phản hồi (**TextToSpeech**, tiếng Việt).
+
+## Ảnh mô tả dự án
+
+Gợi ý: tạo thư mục `docs/screenshots/` (hoặc bất kỳ đường dẫn tương đối nào trong repo), thêm file ảnh (`.png` / `.jpg`), rồi chèn dòng Markdown dưới đây — sửa **đường dẫn** và **mô tả alt** cho phù hợp.
+
+```markdown
+![Mô tả ngắn — ví dụ màn chat](docs/screenshots/chat.png)
+![Ví dụ drawer / dark mode](docs/screenshots/drawer-dark.png)
+```
 
 ---
 
@@ -19,10 +28,10 @@
 
 1. **Cài Ollama** theo hướng dẫn chính thức: [https://ollama.com](https://ollama.com) (Windows / macOS / Linux).
 
-2. **Kéo model** mà app đang dùng mặc định (có thể đổi trong code, mục dưới):
+2. **Kéo model** trùng với model app đang cấu hình (mục [Đổi model Ollama](#đổi-model-ollama)):
 
    ```bash
-   ollama pull llama3
+   ollama pull qwen2.5:7b
    ```
 
 3. **Chạy server** (thường tự chạy sau khi cài; nếu cần kiểm tra):
@@ -33,25 +42,31 @@
 
    Mặc định API lắng nghe **`http://127.0.0.1:11434`**.
 
-4. **Thử nhanh API chat** (tùy chọn):
+4. **Thử nhanh API chat (stream)** (tùy chọn):
 
    ```bash
-   curl http://127.0.0.1:11434/api/chat -d '{
-     "model": "llama3",
+   curl -N http://127.0.0.1:11434/api/chat -d '{
+     "model": "qwen2.5:7b",
      "messages": [{"role":"user","content":"Xin chào"}],
-     "stream": false
+     "stream": true
    }'
    ```
 
-Ứng dụng gọi **`POST {baseUrl}/api/chat`** với body `OllamaChatRequest` (`model`, `messages`, `stream: false`) và đọc `message.content` từ JSON phản hồi (`OllamaChatResponse`).
+Ứng dụng gọi **`POST {baseUrl}/api/chat`** với body `OllamaChatRequest` (`model`, `messages`, `stream: true`), đọc từng dòng NDJSON (`OllamaChatResponse`), gom `message.content` và phát sự kiện stream trong `ChatViewModel`.
 
 ---
 
 ## Cấu hình URL Ollama cho Android
 
+Trong `app/build.gradle.kts`, `defaultConfig`:
+
+```kotlin
+buildConfigField("String", "OLLAMA_BASE_URL", "\"http://...\"")
+```
+
 ### Emulator (AVD)
 
-Máy ảo trỏ về máy host qua **`10.0.2.2`**. Mặc định trong `app/build.gradle.kts`:
+Máy ảo trỏ về máy host qua **`10.0.2.2`**. Ví dụ:
 
 ```kotlin
 buildConfigField("String", "OLLAMA_BASE_URL", "\"http://10.0.2.2:11434\"")
@@ -77,9 +92,17 @@ buildConfigField("String", "OLLAMA_BASE_URL", "\"http://10.0.2.2:11434\"")
 Model mặc định nằm trong Dagger module:
 
 - File: `app/src/main/java/com/example/chatbot/di/AppModule.kt`
-- Hàm: `provideOllamaModel()` — hiện trả về `"llama3"`.
+- Hàm: `provideOllamaModel()` — hiện trả về `"qwen2.5:7b"`.
 
-Đổi chuỗi cho trùng tên model đã `ollama pull` (ví dụ `llama3.2`, `mistral`, …).
+Đổi chuỗi cho trùng tên model đã `ollama pull` (ví dụ `llama3`, `mistral`, …).
+
+---
+
+## Timeout mạng (OkHttp)
+
+Trong `AppModule.kt`, client dùng **15 giây** cho `connectTimeout`, `readTimeout`, `writeTimeout`.
+
+**Lưu ý:** `readTimeout` áp dụng cho khoảng thời gian **không có dữ liệc** giữa hai lần đọc. Stream model chậm có thể cần tăng `readTimeout` (ví dụ 120s) nếu gặp lỗi timeout giữa chừng.
 
 ---
 
@@ -88,7 +111,7 @@ Model mặc định nằm trong Dagger module:
 1. Clone / mở thư mục repo.
 2. Đảm bảo **Ollama** đang chạy và model đã pull.
 3. **File → Sync Project with Gradle Files**.
-4. Chọn **Run** trên emulator hoặc thiết bại (đã chỉnh URL nếu dùng máy thật).
+4. Chọn **Run** trên emulator hoặc thiết bị (đã chỉnh URL nếu dùng máy thật).
 
 Lệnh biên dịch (tùy chọn):
 
@@ -107,6 +130,15 @@ Lệnh biên dịch (tùy chọn):
 
 ---
 
+## Giao diện sáng / tối
+
+- **Công tắc “Chế độ tối”** trong header **drawer** (danh sách phiên chat).
+- Lưu preference: `ThemeModePreferences` (`SharedPreferences`). Lần đầu: theo hệ thống; sau khi gạt: ép sáng hoặc tối.
+- Áp dụng khi mở app: `ChatBotApplication` gọi `applyPersistedMode`.
+- Màu theo `values/` và `values-night/` (theme, bubble, markdown, code block).
+
+---
+
 ## Cấu trúc thư mục (tóm tắt)
 
 ```
@@ -116,17 +148,18 @@ ChatBot2/
 │   └── src/main/
 │       ├── AndroidManifest.xml       # Application, Activity, permissions
 │       ├── java/com/example/chatbot/
-│       │   ├── ChatBotApplication.kt # @HiltAndroidApp
+│       │   ├── ChatBotApplication.kt # @HiltAndroidApp, áp dụng theme đã lưu
 │       │   ├── data/
 │       │   │   ├── local/            # Realm: ChatSessionStore
 │       │   │   ├── model/            # Ollama DTO (request/response/message)
-│       │   │   └── repository/       # ChatRepository + OllamaChatRepository
+│       │   │   └── repository/       # ChatRepository, OllamaChatRepository, ChatStreamEvent
 │       │   ├── di/                   # Hilt: AppModule, MarkdownModule, RealmModule, …
 │       │   ├── prism/                # Cấu hình grammar Prism (highlight)
 │       │   └── ui/
-│       │       ├── main/MainActivity.kt
+│       │       ├── main/MainActivity.kt   # Toolbar, drawer, TTS/STT, cuộn chat
+│       │       ├── theme/ThemeModePreferences.kt
 │       │       └── chat/             # ViewModel, Adapter, Markwon entries, UI models
-│       └── res/                      # layout, values, menu, network_security_config, …
+│       └── res/                      # layout, values, values-night, menu, …
 ├── markwon-prism-bundles/            # Module Java: bundle grammar Prism4j cho Markwon
 ├── gradle/libs.versions.toml         # Phiên bản thư viện
 ├── settings.gradle.kts               # include :app, :markwon-prism-bundles
@@ -136,13 +169,16 @@ ChatBot2/
 ### Luồng dữ liệu (khái quát)
 
 1. **UI** (`MainActivity` + `ChatAdapter`) hiển thị tin nhắn; user gửi nội dung qua `ChatViewModel`.
-2. **ChatViewModel** gọi **`ChatRepository`** (triển khai **`OllamaChatRepository`**) → **OkHttp** `POST /api/chat`.
-3. **ChatSessionStore** (Realm) lưu/đọc tin theo phiên; drawer mở các phiên gần đây.
+2. **ChatViewModel** gọi **`ChatRepository.chatStream`** (`OllamaChatRepository`) → **OkHttp** stream **`POST /api/chat`** (NDJSON), cập nhật UI theo chunk / `Done` / `Failed`; lỗi có **Thử lại** trên bubble user tương ứng.
+3. **ChatSessionStore** (Realm, schema version **2**) lưu/đọc tin theo phiên; trường **`showRetry`** trên tin user để sau khi kill app vẫn hiện Thử lại; drawer mở các phiên gần đây.
 
-### Markdown
+### Markdown & highlight
 
-- **`MarkdownModule`**: hai instance **Markwon** (`TEXT` cho bubble user; **BLOCKS** cho bubble trợ lý với `MarkwonAdapter` + code block / bảng).
-- **`ChatMarkdownCodeBlockEntries`**: fenced/indented code, nút copy, xử lý filler Markwon.
+- **`MarkdownModule`**: hai instance **Markwon** được inject theo tên (`TEXT` cho bubble user; **BLOCKS** cho bubble trợ lý với `MarkwonAdapter` + fenced/indented code + bảng). **Không** `@Singleton` để mỗi lần tạo lại `MainActivity` (đổi theme) có màu Markwon đúng `night`.
+- **`ChatPrism4jTheme`**: ghi đè `Prism4jTheme.textColor()` bằng `chat_markdown_code_text` để token không highlight không bị màu đen mặc định của Prism trên nền tối.
+- **`markwonColorContext`**: khi ép `MODE_NIGHT_YES` / `NO`, resolve màu qua `createConfigurationContext` để `values-night` khớp với `AppCompatDelegate` dù `ApplicationContext` chưa đổi `uiMode`.
+- **`ChatMarkdownCodeBlockEntries`**: fenced/indented code, nút copy, xử lý filler Markwon core.
+- **`dimens`**: `chat_markdown_theme_block_margin` — `MarkwonTheme.blockMargin` (list / blockquote) nhỏ hơn mặc định thư viện.
 
 ---
 
@@ -156,9 +192,10 @@ Module **`java-library`** build grammar **Prism4j** (annotation processor `prism
 
 | Hiện tượng | Gợi ý |
 |-------------|--------|
-| Lỗi kết nối / timeout | Kiểm tra Ollama chạy, URL đúng (emulator vs IP LAN), firewall. |
+| Lỗi kết nối / timeout | Kiểm tra Ollama chạy, URL đúng (emulator vs IP LAN), firewall. Stream chậm: cân nhắc tăng `readTimeout` trong `AppModule`. |
 | HTTP 404 / model | Đúng tên model trong `AppModule` và đã `ollama pull`. |
 | Mic không hoạt động | Cấp quyền RECORD_AUDIO; thiết bị hỗ trợ `SpeechRecognizer`. |
+| Chữ code / biến khó nhìn sau đổi theme | Đảm bảo đã rebuild; Markwon không singleton + `markwonColorContext` + `ChatPrism4jTheme` xử lý màu theo dark mode. |
 
 Log HTTP cơ bản (DEBUG) được gắn qua **OkHttp LoggingInterceptor** trong `AppModule`.
 
