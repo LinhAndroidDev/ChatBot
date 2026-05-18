@@ -1,7 +1,9 @@
 package com.example.chatbot.di
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import com.example.chatbot.R
 import dagger.Module
@@ -20,11 +22,22 @@ import io.noties.markwon.syntax.Prism4jThemeDefault
 import io.noties.markwon.syntax.SyntaxHighlightPlugin
 import io.noties.prism4j.Prism4j
 import javax.inject.Named
-import javax.inject.Singleton
 
 internal object ChatMarkwonNamed {
     const val TEXT = "chat_markwon_text"
     const val BLOCKS = "chat_markwon_blocks"
+}
+
+/**
+ * [Prism4jThemeDefault] uses [Prism4jTheme.textColor] ≈ black for tokens without a Prism class.
+ * [SyntaxHighlightPlugin] applies that as [MarkwonTheme.codeBlockTextColor], which hides
+ * identifiers on dark code cards. This theme keeps Prism token map but uses app foreground.
+ */
+private class ChatPrism4jTheme(
+    prismBackground: Int,
+    private val defaultCodeForeground: Int,
+) : Prism4jThemeDefault(prismBackground) {
+    override fun textColor(): Int = defaultCodeForeground
 }
 
 /**
@@ -34,18 +47,35 @@ internal object ChatMarkwonNamed {
  */
 private val markwonTransparentNonZero: Int = Color.argb(0, 255, 255, 255)
 
+/**
+ * [ApplicationContext] đôi khi chưa kịp [Configuration.uiMode] khớp [AppCompatDelegate] sau khi ép sáng/tối,
+ * nên [ContextCompat.getColor] vẫn trả màu `values` thay vì `values-night`. Context này ép night bit khi cần.
+ */
+private fun markwonColorContext(base: Context): Context {
+    val forcedNight = when (AppCompatDelegate.getDefaultNightMode()) {
+        AppCompatDelegate.MODE_NIGHT_YES -> Configuration.UI_MODE_NIGHT_YES
+        AppCompatDelegate.MODE_NIGHT_NO -> Configuration.UI_MODE_NIGHT_NO
+        else -> null
+    }
+    if (forcedNight == null) return base
+    val cfg = Configuration(base.resources.configuration)
+    cfg.uiMode = (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or forcedNight
+    return base.createConfigurationContext(cfg)
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object MarkdownModule {
 
+    // Markwon không @Singleton: màu theme (light/dark) được bake vào MarkwonTheme lúc build.
+    // Nếu singleton, đổi dark mode sau khi mở app vẫn giữ màu cũ → chữ code block trùng nền, gần như biến mất.
+
     @Provides
-    @Singleton
     @Named(ChatMarkwonNamed.TEXT)
     fun provideChatMarkwonText(@ApplicationContext context: Context): Markwon =
         buildChatMarkwon(context, useTablePluginForTextView = true)
 
     @Provides
-    @Singleton
     @Named(ChatMarkwonNamed.BLOCKS)
     fun provideChatMarkwonBlocks(@ApplicationContext context: Context): Markwon =
         buildChatMarkwon(context, useTablePluginForTextView = false)
@@ -54,20 +84,18 @@ object MarkdownModule {
         context: Context,
         useTablePluginForTextView: Boolean,
     ): Markwon {
+        val cc = markwonColorContext(context)
         val prism4j = Prism4j(ChatPrismGrammarLocator())
-        val codeFill = ContextCompat.getColor(context, R.color.chat_markdown_code_block_fill)
-        val prismTheme = if (useTablePluginForTextView) {
-            Prism4jThemeDefault.create(codeFill)
-        } else {
-            Prism4jThemeDefault.create(markwonTransparentNonZero)
-        }
-        val linkColor = ContextCompat.getColor(context, R.color.chat_markdown_link)
-        val codeBlockBg = ContextCompat.getColor(context, R.color.chat_markdown_code_block_bg)
-        val codeBlockText = ContextCompat.getColor(context, R.color.chat_markdown_code_text)
-        val inlineCodeBg = ContextCompat.getColor(context, R.color.chat_markdown_inline_code_bg)
-        val inlineCodeText = ContextCompat.getColor(context, R.color.chat_markdown_inline_code_text)
-        val tablePlugin = TablePlugin.create(context)
-        val builder = Markwon.builder(context)
+        val codeFill = ContextCompat.getColor(cc, R.color.chat_markdown_code_block_fill)
+        val linkColor = ContextCompat.getColor(cc, R.color.chat_markdown_link)
+        val codeBlockBg = ContextCompat.getColor(cc, R.color.chat_markdown_code_block_bg)
+        val codeBlockText = ContextCompat.getColor(cc, R.color.chat_markdown_code_text)
+        val inlineCodeBg = ContextCompat.getColor(cc, R.color.chat_markdown_inline_code_bg)
+        val inlineCodeText = ContextCompat.getColor(cc, R.color.chat_markdown_inline_code_text)
+        val prismBackground = if (useTablePluginForTextView) codeFill else markwonTransparentNonZero
+        val prismTheme = ChatPrism4jTheme(prismBackground, codeBlockText)
+        val tablePlugin = TablePlugin.create(cc)
+        val builder = Markwon.builder(cc)
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(themeBuilder: MarkwonTheme.Builder) {
                     themeBuilder
@@ -98,6 +126,10 @@ object MarkdownModule {
                             // restore inline code surface while keeping code blocks visually on the card only.
                             themeBuilder.codeBackgroundColor(inlineCodeBg)
                         }
+                        // Ghi đè lại sau SyntaxHighlight: codeTextColor bị gán = textColor Prism.
+                        themeBuilder
+                            .codeBlockTextColor(codeBlockText)
+                            .codeTextColor(inlineCodeText)
                     }
                 },
             )
